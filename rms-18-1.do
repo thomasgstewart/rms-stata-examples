@@ -176,12 +176,3 @@ stcox rcs_q75_time* if _plotindicator == 0, efron
 cox_lhhat_ci, qt(75) stub(poorman3_)
 twoway (scatter poorman3_q75_time q75_time) (line q75_time q75_time, sort)
 
-
-
-
-
-
-
-
-
-
