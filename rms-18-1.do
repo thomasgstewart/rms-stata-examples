@@ -46,9 +46,9 @@ stset dtime, failure(acm==1)
 * plotdata for partial effect plots after the model is fit
 centile age wt pf heart map hg sg sz logap bm, centile(50)
 * reference: plotdata, at(rx=1 age=73 wt=98 pf=1 heart=1 map=10 hg=14 sg=10 sz=11 logap=-.35 bm=0)
-plotdata, at(rx=1 age=55/82 wt=98 pf=1 heart=1 map=10 hg=14 sg=10 sz=11 logap=-.35 bm=0)
-plotdata, at(rx=1 age=73 wt=75/130 pf=1 heart=1 map=10 hg=14 sg=10 sz=11 logap=-.35 bm=0)
-plotdata, at(rx=1 age=73 wt=98 pf=1 heart=1 map=10 hg=9(.5)17 sg=10 sz=11 logap=-.35 bm=0)
+plotdata, at(rx=1; age=55/82; wt=98; pf=1; heart=1; map=10; hg=14; sg=10; sz=11; logap=-.35; bm=0)
+plotdata, at(rx=1; age=73; wt=75/130; pf=1; heart=1; map=10; hg=14; sg=10; sz=11; logap=-.35; bm=0)
+plotdata, at(rx=1; age=73; wt=98; pf=1; heart=1; map=10; hg=9(.5)17; sg=10; sz=11; logap=-.35; bm=0)
 
 * Construct restricted cubic splines
 mkspline_plotindicator age, nknots(4)
@@ -139,40 +139,3 @@ twoway ///
   (line q50_time hg, sort fcolor(orange_red%50) lcolor(orange_red) lwidth(thick)) ///
   if _plotindicator == 3 ///
   , ytitle(Median survival time (months))
-
-* Poor man's (or woman's) calibration
-* Note that the first censoring event happens at 50 months.  We can generate a 
-* calibration curve for the 50 month survival probability using the same tools
-* used for logistic regression.
-
-gen survive50 = 1*(acm==0) + 1*(acm==1 & dtime>=50)
-cox_lhhat_ci, spt(50)
-twoway ///
- (lowess survive50 sp_50, lwidth(thick)) ///
- (line sp_50 sp_50, sort) ///
- if _plotindicator == 0 ///
- , legend(order(1 "In sample calibration curve at 50 months" 2 "Ideal calibration"))
-
-
-* I'm putting the following here because I'm thinking through other hacks for calibration in 
-* STATA.  These are just preliminary ideas that I haven't worked through.  Please 
-* disregard.
-mkspline_plotindicator sp_60, nknots(7)
-stcox rcs_sp_60* if _plotindicator == 0, efron
-cox_lhhat_ci, spt(60) stub(poorman_) drop
-twoway (scatter poorman_sp_60 sp_60) (line sp_60 sp_60, sort) if _plotindicator == 0
-
-
-egen float sp60group = cut(sp_60) if _plotindicator == 0, group(10)
-stcox i.sp60group if _plotindicator == 0, efron
-cox_lhhat_ci, spt(60) stub(poorman2_)
-twoway (scatter poorman2_sp_60 sp_60) (line sp_60 sp_60, sort) if _plotindicator == 0
-
-twoway (scatter poorman2_sp_60 sp_60) (scatter poorman_sp_60 sp_60) (line sp_60 sp_60, sort) if _plotindicator == 0
-
-
-mkspline_plotindicator q75_time, nknots(7)
-stcox rcs_q75_time* if _plotindicator == 0, efron
-cox_lhhat_ci, qt(75) stub(poorman3_)
-twoway (scatter poorman3_q75_time q75_time) (line q75_time q75_time, sort)
-
