@@ -139,3 +139,32 @@ twoway ///
   (line q50_time hg, sort fcolor(orange_red%50) lcolor(orange_red) lwidth(thick)) ///
   if _plotindicator == 3 ///
   , ytitle(Median survival time (months))
+
+
+
+* Generate a difference in prediction plot
+* Fit Cox model
+stcox rcs* i.rx pf heart i.bm c.(rcs_age*)#i.bm if _plotindicator == 0, efron
+
+gen lb = .
+gen ub = .
+gen p = .
+local N = _N
+
+	forvalues i = 1/`N' {
+		if _plotindicator[`i'] == 1 {
+			local a1 = rcs_age_1[`i']
+			local a2 = rcs_age_2[`i']
+			local a3 = rcs_age_3[`i']
+			lincom _b[1.bm#c.rcs_age_1]*`a1' + _b[1.bm#c.rcs_age_2]*`a2' + _b[1.bm#c.rcs_age_3]*`a3' +  _b[1.bm]
+			replace ub = r(ub) if _n == `i'
+			replace lb = r(lb) if _n == `i'
+			replace p = r(estimate) if _n == `i'
+		}
+	}
+
+twoway ///
+  (line lb age, sort lcolor(blue) lwidth(thin) lpattern(dash)) ///
+  (line ub age, sort lcolor(blue) lwidth(thin) lpattern(dash)) ///
+  (line p age, sort lcolor(blue) lwidth(thick) lpattern(solid)) ///
+  if _plotindicator == 1
