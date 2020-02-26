@@ -43,6 +43,9 @@ keep dtime acm rx age wt pf heart map hg sg sz logap bm
 * Setup up Cox model data
 stset dtime, failure(acm==1) 
 
+* Kaplan-Meier curve (no covariate adjustment)
+sts graph
+
 * plotdata for partial effect plots after the model is fit
 centile age wt pf heart map hg sg sz logap bm, centile(50)
 * reference: plotdata, at(rx=1 age=73 wt=98 pf=1 heart=1 map=10 hg=14 sg=10 sz=11 logap=-.35 bm=0)
@@ -144,6 +147,7 @@ twoway ///
 
 * Generate a difference in prediction plot
 * Fit Cox model
+* Age effect comparing bm = 1 to bm = 0 (ref)
 stcox rcs* i.rx pf heart i.bm c.(rcs_age*)#i.bm if _plotindicator == 0, efron
 
 gen lb = .
@@ -168,3 +172,35 @@ twoway ///
   (line ub age, sort lcolor(blue) lwidth(thin) lpattern(dash)) ///
   (line p age, sort lcolor(blue) lwidth(thick) lpattern(solid)) ///
   if _plotindicator == 1
+  
+  
+// Hazard ratio plot for age (age = 60 is reference) 
+gen lb2 = .
+gen ub2 = .
+gen p2 = .
+local N = _N
+
+
+        forvalues i = 1/`N' { 
+                if _plotindicator[`i'] == 1 {
+                        local a1 = rcs_age_1[`i']
+                        local a2 = rcs_age_2[`i']
+                        local a3 = rcs_age_3[`i']
+			local ref1 = rcs_age_1[508]
+			local ref2 = rcs_age_2[508]
+			local ref3 = rcs_age_3[508]
+                        lincom _b[c.rcs_age_1]*(`a1'-`ref1') + _b[c.rcs_age_2]*(`a2'-`ref2') + _b[c.rcs_age_3]*(`a3'-`ref3'), hr
+                        replace ub2 = r(ub) if _n == `i'
+                        replace lb2 = r(lb) if _n == `i'
+                        replace p2 = r(estimate) if _n == `i'
+                }
+        }
+replace lb2 = 1 if _n == 508
+replace ub2 = 1 if _n == 508
+
+twoway ///
+  (line lb2 age, sort lcolor(blue) lwidth(thin) lpattern(dash)) ///
+  (line ub2 age, sort lcolor(blue) lwidth(thin) lpattern(dash)) ///
+  (line p2 age, sort lcolor(blue) lwidth(thick) lpattern(solid)) ///
+  if _plotindicator == 1 ///
+  , legend(order(3 "Hazard ratio (age 60 is reference"))
